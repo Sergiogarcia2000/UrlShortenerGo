@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	store := storage.NewUrlRepository()
+	store := storage.NewMemoryUrlStore()
 
 	server := api.NewServer(":8080", store)
 	fmt.Println("Server running on port 8080")

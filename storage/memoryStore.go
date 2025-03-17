@@ -9,7 +9,7 @@ type UrlRepository struct {
 	urls []types.Url
 }
 
-func NewUrlRepository() *UrlRepository {
+func NewMemoryUrlStore() *UrlRepository {
 	return &UrlRepository{
 		urls: make([]types.Url, 0),
 	}

@@ -22,13 +22,14 @@ func NewHandler(store storage.Storage) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/url", h.handleCreateUrl).Methods("POST")
-	router.HandleFunc("/url/{code}", h.handleGetUrl).Methods("GET")
+	router.HandleFunc("/urls", h.handleCreateUrl).Methods("POST")
+	router.HandleFunc("/urls/{code}", h.handleGetUrl).Methods("GET")
 	router.HandleFunc("/urls", h.handleGetAllUrls).Methods("GET")
 }
 
 func (h *Handler) handleCreateUrl(w http.ResponseWriter, r *http.Request) {
 	var urlPayload types.CreateUrlPayload
+
 	if err := utils.ParseJSON(r, &urlPayload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
 		return
@@ -37,6 +38,11 @@ func (h *Handler) handleCreateUrl(w http.ResponseWriter, r *http.Request) {
 	if err := utils.Validate.Struct(urlPayload); err != nil {
 		errors := err.(validator.ValidationErrors)
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	if urlExists, _ := h.store.GetUrlByOriginalUrl(r.Context(), urlPayload.OriginalUrl); urlExists != nil {
+		utils.WriteJSON(w, http.StatusOK, urlExists)
 		return
 	}
 
@@ -50,8 +56,6 @@ func (h *Handler) handleCreateUrl(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-
 	utils.WriteJSON(w, http.StatusOK, url)
 }
 
@@ -76,7 +80,7 @@ func (h *Handler) handleGetUrl(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("URL does not exist"))
 	}
 
-	http.Redirect(w, r, url.OriginalUrl, http.StatusMovedPermanently)
+	http.Redirect(w, r, url.OriginalUrl, http.StatusFound) // Using 302 instead of 301 because 301 is cached by the browser so it won't update the visit count
 }
 
 func (h *Handler) handleGetAllUrls(w http.ResponseWriter, r *http.Request) {
